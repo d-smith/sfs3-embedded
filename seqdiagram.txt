@@ -1,0 +1,11 @@
+title Embedded State Machine Execution
+
+client->+service: do the thing
+service -> +step fn API: startExecution
+step fn API ->> +state machine: start
+step fn API --> -service: execution id
+loop: while state machine is running
+    service -> +step fn API: describeExecution
+    step fn API --> -service: state machine status
+end
+service --> client: result of doing the thing
