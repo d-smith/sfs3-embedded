@@ -17,3 +17,11 @@ In this scenario, it is assumed the orchestration executed by the state machine 
 To obtain the termination state of the step machine, the DescribeExecution action is invoked with the execution id returned by StartExecution. DescribeExecution is called repeatedly (while a sensible interval between calls) until the status in the response is no longer RUNNING.
 
 At that point the response back to the client can be completed.
+
+### S3 Side Car Pattern
+
+### Dealing with S3 Consistency
+
+## Step Function Deployment
+
+## Sample Service
