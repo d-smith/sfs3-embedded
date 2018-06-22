@@ -2,79 +2,46 @@ const express = require('express');
 const timeout = require('connect-timeout');
 const app = express();
 const bodyParser = require('body-parser');
-const AWS = require('aws-sdk');
+const rp = require('request-promise-native');
 
-var proxy = require('proxy-agent');    
-AWS.config.update({
-    httpOptions: { agent: proxy(process.env.HTTPS_PROXY) }
-});
-
-const stepFunctions = new AWS.StepFunctions();
-const S3 = new AWS.S3();
-
-const FlakeIdGen = require('flake-idgen')
-    , intformat = require('biguint-format')
-    , generator = new FlakeIdGen;
-
-
-const invokeIt = async (input, serviceResponse) => {
-
-    console.log(`invoke state machine with input ${input}`);
-
-    //Generate a txn id we'll use as the object in s3 to store state
-    //data, content, etc.
-    let txnId = intformat(generator.next(), 'hex',{prefix:'0x'});
-    console.log(`txnId: ${txnId}`);
-    
-    //Drop the state machine input into s3
-    let params = {
-        Body: JSON.stringify(input),
-        Key: txnId,
-        ServerSideEncryption: "AES256",
-        Bucket: process.env.BUCKET_NAME
-    };
-
-    try {
-        let response = await S3.putObject(params).promise();
-        console.log(response);
-    } catch(theError) {
-        console.log(JSON.stringify(theError));
-        serviceResponse.status(500).send('Unable to write transaction input');
-        return;
-    }
-
-    //Instantiate the process
-    let sfparams = {
-        stateMachineArn: process.env.STEP_FN_ARN,
-        input: JSON.stringify({processData: txnId})
-    }
-
-    let result = await stepFunctions.startExecution(sfparams).promise();
-    console.log(`step fn result: ${JSON.stringify(result)}`);
-    let tuple = {
-        response: serviceResponse,
-        executionArn: result['executionArn']
-    }
-
-    txnToResponseMap.set(txnId, tuple);
-}
 
 // Stick the express response objects in a map, so we can
 // lookup and complete the response when the process state
 // is published.
 let txnToResponseMap = new Map();
 
-const headersSentForTransaction = (txnId, response, txnMap) => {
+const callStepFunc = async (input, serviceResponse) => {
+    let options = {
+        method: 'POST',
+        uri: process.env.START_ENDPOINT,
+        body: input,
+        json:true,
+        headers: {
+            'x-api-key':process.env.API_KEY
+        }
+    };
+    console.log(`start process with input ${JSON.stringify(input)}`);
+    try {
+        let callResult = await rp(options);
+        console.log(callResult);
+        txnToResponseMap.set(callResult['executionId'],serviceResponse);
+    } catch(theError) {
+        serviceResponse.status(500).send(theError.message);
+    }
+}
+
+
+const headersSentForTransaction = (executionArn, response, txnMap) => {
     if(response.headersSent) {
-        console.log(`headers sent for ${txnId} - most likely timed out`);
-        txnMap.delete(txnId);
+        console.log(`headers sent for ${executionArn} - most likely timed out`);
+        txnMap.delete(executionArn);
         return true;
     }
 
     return false;
 }
 
-const sendResponseBasedOnState = (state, txnId, response, txnMap) => {
+const sendResponseBasedOnState = (state, executionArn, response, txnMap) => {
     // When polling the state machine might still be running.
     if(state == 'RUNNING') {
         console.log('status is running - poll later');
@@ -89,34 +56,40 @@ const sendResponseBasedOnState = (state, txnId, response, txnMap) => {
         response.status(400).send(state);
     }
 
-    txnMap.delete(txnId);
+    txnMap.delete(executionArn);
 }
 
-const checkStateForTxn = async (txnId, txnMap, executionArn, resp) => {
+const checkStateForTxn = async (txnMap, executionArn, resp) => {
     console.log(`checking state for execution ${executionArn}`);
 
-    if(headersSentForTransaction(txnId, resp, txnMap)) {
+    if(headersSentForTransaction(executionArn, resp, txnMap)) {
         return;
     }
 
+    let options = {
+        method: 'GET',
+        uri: process.env.STATE_ENDPOINT + '?executionArn=' + executionArn,
+        json:true
+    };
+
     try {
-        let description = await stepFunctions.describeExecution({executionArn: executionArn}).promise();
-        console.log(`call result: ${JSON.stringify(description)}`);
-        let state = description['status'];
-        sendResponseBasedOnState(state, txnId, resp, txnMap);
+        let callResult = await rp(options);
+
+        console.log(`call result: ${JSON.stringify(callResult)}`);
+
+        let state = callResult['status'];
+        sendResponseBasedOnState(state, executionArn, resp, txnMap);
     } catch(err) {
         console.log(err.message);
     }
 
 }
 
-const doPollForResults = async () => {
-    if(pollForResults == false) {
-        return;
-    }
 
-    txnToResponseMap.forEach((txnTuple, txnId)=> {
-        checkStateForTxn(txnId, txnToResponseMap, txnTuple['executionArn'], txnTuple['response']);
+const doPollForResults = async () => {
+
+    txnToResponseMap.forEach((txnResponse, executionArn)=> {
+        checkStateForTxn(txnToResponseMap, executionArn, txnResponse);
     });
 
     console.log('polling for results');
@@ -132,16 +105,16 @@ const haltOnTimeout = (req, res, next) => {
 // different
 app.use(timeout(20*1000));
 app.use(haltOnTimeout);
-app.use(bodyParser.json());
+app.use(bodyParser.json(type='application/json'));
 
 // Sample endpoint to initiate the step function process
 // and the communication back of the response.
 app.post('/p1', function (req, res) {
-    invokeIt(req.body, res);
+    console.log(req.body);
+    callStepFunc(req.body, res);
 });
 
 const doInit = async () => {
-    pollForResults = true;
     doPollForResults();
 
     let port = process.env.PORT || 3000;
