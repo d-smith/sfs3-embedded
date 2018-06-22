@@ -18,9 +18,13 @@ To obtain the termination state of the step machine, the DescribeExecution actio
 
 At that point the response back to the client can be completed.
 
-### S3 Side Car Pattern
+### S3 Side Car and API Facade Pattern
 
-This project uses s3 to store all state machine data to avoid data size limitations and to have more capabilities to secure the data via bucket encryption and access policies.
+This project uses s3 to store all state machine data to avoid data size limitations and to have more capabilities to secure the data via bucket encryption and access policies. To make the process input data available to the process, we write the process input data to an S3 object, which will be used by the state machine for the duration of its execution. The object key is the only data related to the process that is conveyed to each step of the state machine as it executes.
+
+To ensure the integrity of the process data, we want to grant write permission to the process data object to just the process itself. This means that that the client can't write the input data to the object prior to starting the execution as they would have the permissions needed to alter the data in the object at anytime.
+
+To ensure the integrity of the process data, we put a facade in front of the process, allowing callers to start executions, describe the execution state, and to read the data associated with the process. We allow callers to invoke the API, but do not grant them any permissions to directly access the S3 objects.
 
 ### Dealing with S3 Consistency
 
@@ -28,7 +32,7 @@ Note when using s3 to hold process state data, steps that read and write process
 consistency model](https://docs.aws.amazon.com/AmazonS3/latest/dev/Introduction.html#ConsistencyModel). In the sample code we include a read-predicate for each step to ensure the previous step's data has been read prior to proceeding. If the read predicate is not satisfied, a specific error is thrown indicating the failure, and step function error handling and retry specification is used to attempt the step again.
 
 
-## Step Function Deployment
+## Step Function and API Facade Deployment
 
 To install the step function, from the `state-machine` directory:
 
@@ -36,6 +40,8 @@ To install the step function, from the `state-machine` directory:
 npm install
 sls deploy --stage <stage name> --aws-profile <profile name>
 ````
+
+The deployment will return the endpoints and API key needed to run the sample service.
 
 ### Monitoring Dashboard
 
@@ -45,10 +51,11 @@ Use `install-dashboard.yml` to install a simple cloud watch dashboard for monito
 
 The `sample-service` directory contains an implementation of the pattern discussed above. To run the sample, set the following environment variables:
 
-* AWS_PROFILE - name of the profile configured with credentials to access AWS. The managed policy in `svcpolicy.yml` provides the minimum policy needed to create and describe the step function state machine execution created by this project.
-* AWS_REGION
-* BUCKET_NAME - name of the input bucket to write input into, created when  the state-machine stack was installed.
-* STEP_FN_ARN - step function ARN created by the state-machine stack.
+* START_ENDPOINT - full url of the POST endpoint for the `start-process` resource.
+* STATE_ENDPOINT - full URL of the GET endpoint for the `process-state` resource.
+* APIKEY - api key associated with the API deployment
+
+The endpoints and keys can be obtained using the `sls info` command.
 
 With the environment variables set, to run the sample:
 

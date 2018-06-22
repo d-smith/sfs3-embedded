@@ -76,7 +76,7 @@ module.exports.processState = async (event, context, callback) => {
 
     let executionArn = queryStringParams['executionArn'];
     if(executionArn == undefined || executionArn == '') {
-        console.log('query parameters missing execution arn');
+        console.log('query parameters missing executionArn');
         callback(null, {statusCode: 400});
         return;
     }
@@ -91,4 +91,34 @@ module.exports.processState = async (event, context, callback) => {
     }
 
     
+}
+
+module.exports.processData = async (event, context, callback) => {
+    let queryStringParams = event['queryStringParameters'];
+    if(queryStringParams == null) {
+        console.log("request missing query string parameters");
+        callback(null, {statusCode: 400});
+        return;
+    }
+
+    let transactionId = queryStringParams['transactionId'];
+    if(transactionId == undefined || transactionId == '') {
+        console.log('query parameters missing transactionId');
+        callback(null, {statusCode: 400});
+        return;
+    }
+
+    let params = {
+        Bucket: process.env.BUCKET_NAME,
+        Key: transactionId
+    };
+
+    try {
+        let s3response = await S3.getObject(params).promise();
+        console.log(s3response);
+        callback(null, {statusCode: 200, body: s3response['Body'].toString()});
+    } catch(theError) {
+        console.log(theError);
+        callback(null, {statusCode: 400, body: theError.message});
+    }
 }

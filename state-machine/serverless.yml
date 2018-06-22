@@ -28,6 +28,11 @@ functions:
     role: processStateRole
     events:
       - http: GET process-state
+  processData:
+    handler: facade.processData
+    role: processDataRole
+    events:
+      - http: GET process-data
   stepA:
     handler: aprocess.stepA
     timeout: 10
@@ -335,6 +340,42 @@ resources:
             - Effect: Allow
               Action:
               - s3:PutObject
+              Resource:
+                - 'Fn::Join':
+                  - '/'
+                  -
+                    - Fn::GetAtt: [ ProcessInputBucket, Arn ]
+                    - '*'
+
+    processDataRole:
+      Type: AWS::IAM::Role
+      Properties:
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+              - lambda.amazonaws.com
+            Action:
+            - sts:AssumeRole
+        Path: "/"
+        Policies:
+        - PolicyName: logs
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+              - logs:*
+              Resource: arn:aws:logs:*:*:*
+        - PolicyName: s3
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+            - Effect: Allow
+              Action:
+              - s3:GetObject
               Resource:
                 - 'Fn::Join':
                   - '/'
