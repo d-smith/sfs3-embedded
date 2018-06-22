@@ -31,9 +31,11 @@ module.exports.startProcess = async (event, context, callback) => {
     }
 
     let inputObj = JSON.parse(inputPayload);
+    let processData = {};
+    processData['processInput'] = inputObj;
     
     let params = {
-        Body: inputPayload,
+        Body: JSON.stringify(processData),
         Key: txnId,
         ServerSideEncryption: "AES256",
         Bucket: process.env.BUCKET_NAME
@@ -45,16 +47,13 @@ module.exports.startProcess = async (event, context, callback) => {
     } catch(theError) {
         console.log(JSON.stringify(theError));
         callback(null, {statusCode: 500, body: 'Error capturing process input'});
+        return;
     }
 
 
     
     processInput = {};
     processInput['processData'] = txnId;
-    if(inputObj['subtopic'] != undefined) {
-        processInput['subtopic'] = inputObj['subtopic'];
-    }
-
     let startProcResponse = await startProcess(JSON.stringify(processInput));
     console.log(startProcResponse);
 

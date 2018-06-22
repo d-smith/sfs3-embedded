@@ -21,10 +21,13 @@ const callStepFunc = async (input, serviceResponse) => {
         }
     };
     console.log(`start process with input ${JSON.stringify(input)}`);
-    let callResult = await rp(options);
-    console.log(callResult);
-
-    txnToResponseMap.set(callResult['executionId'],serviceResponse);
+    try {
+        let callResult = await rp(options);
+        console.log(callResult);
+        txnToResponseMap.set(callResult['executionId'],serviceResponse);
+    } catch(theError) {
+        serviceResponse.status(500).send(theError.message);
+    }
 }
 
 
