@@ -26,6 +26,12 @@ To ensure the integrity of the process data, we want to grant write permission t
 
 To ensure the integrity of the process data, we put a facade in front of the process, allowing callers to start executions, describe the execution state, and to read the data associated with the process. We allow callers to invoke the API, but do not grant them any permissions to directly access the S3 objects.
 
+With the API facade in place, the components of the solution look like this:
+
+![solution components](./step-function-facade.jpeg)
+
+Note this pattern is agnostic to how the service instantiating the step function execution is packaged or deployed. In some cases, such as services running in a container managed by an Amazon container service, the need to use an API facade to control bucket access might not be needed as the role could be assigned to the container context.
+
 ### Dealing with S3 Consistency
 
 Note when using s3 to hold process state data, steps that read and write process data need to account for the [S3 
