@@ -20,10 +20,39 @@ At that point the response back to the client can be completed.
 
 ### S3 Side Car Pattern
 
+This project uses s3 to store all state machine data to avoid data size limitations and to have more capabilities to secure the data via bucket encryption and access policies.
+
 ### Dealing with S3 Consistency
+
+Note when using s3 to hold process state data, steps that read and write process data need to account for the [S3 
+consistency model](https://docs.aws.amazon.com/AmazonS3/latest/dev/Introduction.html#ConsistencyModel). In the sample code we include a read-predicate for each step to ensure the previous step's data has been read prior to proceeding. If the read predicate is not satisfied, a specific error is thrown indicating the failure, and step function error handling and retry specification is used to attempt the step again.
+
 
 ## Step Function Deployment
 
+To install the step function, from the `state-machine` directory:
+
+````console
+npm install
+sls deploy --stage <stage name> --aws-profile <profile name>
+````
+
 ### Monitoring Dashboard
 
+Use `install-dashboard.yml` to install a simple cloud watch dashboard for monitoring step function executions.
+
 ## Sample Service
+
+The `sample-service` directory contains an implementation of the pattern discussed above. To run the sample, set the following environment variables:
+
+* AWS_PROFILE - name of the profile configured with credentials to access AWS. The managed policy in `svcpolicy.yml` provides the minimum policy needed to create and describe the step function state machine execution created by this project.
+* AWS_REGION
+* BUCKET_NAME - name of the input bucket to write input into, created when  the state-machine stack was installed.
+* STEP_FN_ARN - step function ARN created by the state-machine stack.
+
+With the environment variables set, to run the sample:
+
+````console
+npm install
+node samplesvc.js
+````
