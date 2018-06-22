@@ -24,4 +24,6 @@ At that point the response back to the client can be completed.
 
 ## Step Function Deployment
 
+### Monitoring Dashboard
+
 ## Sample Service

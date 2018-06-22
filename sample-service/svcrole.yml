@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: 2010-09-09
+Description: >
+  Create a cloudfront distribution with blue and green buckets, and a null bucket for
+  default. Include a view request lambda function that can route to either bucket based on
+  configuration.
+
+Parameters:
+  Stage:
+    Type: String
+  BucketName:
+    Type: String
+
+Resources:
+
+
+  StateMachineAccess:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: s3
+            Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:GetObject
+            Resource:
+              Fn::Join: [ '', ['arn:aws:s3:::', Ref: 'BucketName', '/*']]
+          - Sid: sfndescexec
+            Effect: Allow
+            Action:
+              - states:DescribeExecution
+            Resource:
+              Fn::Join: [ '', ['arn:aws:states:', Ref: 'AWS::Region', ':', Ref: 'AWS::AccountId', ':execution:sfn-sfs3embedded-', Ref: 'Stage', ':*']]
+          - Sid: sfnstart
+            Effect: Allow
+            Action:
+              - states:StartExecution
+            Resource:
+              Fn::Join: [ '', ['arn:aws:states:', Ref: 'AWS::Region', ':', Ref: 'AWS::AccountId', ':stateMachine:sfn-sfs3embedded-', Ref: 'Stage']]
+      ManagedPolicyName:
+        Fn::Join: [ '', ['SfnSfs3embeddedCaller-', Ref: 'Stage']]
+ 
