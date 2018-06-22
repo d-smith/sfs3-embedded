@@ -4,6 +4,12 @@ provider:
   name: aws
   stage: ${opt:stage, 'dev'}
   runtime: nodejs8.10
+  apiKeys:
+    - sfs3embedded-${opt:stage, self:provider.stage}
+  usagePlan:
+    throttle:
+      burstLimit: 10
+      rateLimit: 5
   environment:
     BUCKET_NAME: ${self:custom.bucketName}
     STEP_FN_ARN: 'arn:aws:states:#{AWS::Region}:#{AWS::AccountId}:stateMachine:sfn-${self:service}-${self:provider.stage}'
@@ -165,12 +171,6 @@ resources:
       Properties:
         BucketName: ${self:custom.bucketName}
         AccessControl: BucketOwnerFullControl
-
-    ProcessEventStream:
-      Type: AWS::Kinesis::Stream
-      Properties:
-        Name: ${self:custom.streamName}
-        ShardCount: 1
  
     stepRole:
       Type: AWS::IAM::Role
