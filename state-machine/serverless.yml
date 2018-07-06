@@ -181,6 +181,8 @@ resources:
     stepRole:
       Type: AWS::IAM::Role
       Properties:
+        RoleName:
+          Fn::Join: [ '-', ['stepRole', '${self:service}',  '${self:provider.stage}' ]]
         AssumeRolePolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -238,6 +240,8 @@ resources:
     minimalStepRole:
       Type: AWS::IAM::Role
       Properties:
+        RoleName:
+          Fn::Join: [ '-', ['minimalStepRole', '${self:service}',  '${self:provider.stage}' ]]
         AssumeRolePolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -329,6 +333,8 @@ resources:
     processStartRole:
       Type: AWS::IAM::Role
       Properties:
+        RoleName:
+          Fn::Join: [ '-', ['processStartRole', '${self:service}',  '${self:provider.stage}' ]]
         AssumeRolePolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -385,6 +391,8 @@ resources:
     processDataRole:
       Type: AWS::IAM::Role
       Properties:
+        RoleName:
+          Fn::Join: [ '-', ['processDataRole', '${self:service}',  '${self:provider.stage}' ]]
         AssumeRolePolicyDocument:
           Version: '2012-10-17'
           Statement:
@@ -421,6 +429,8 @@ resources:
     processStateRole:
       Type: AWS::IAM::Role
       Properties:
+        RoleName:
+          Fn::Join: [ '-', ['processStateRole', '${self:service}',  '${self:provider.stage}' ]]
         AssumeRolePolicyDocument:
           Version: '2012-10-17'
           Statement:
