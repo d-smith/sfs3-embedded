@@ -192,52 +192,11 @@ resources:
             Principal:
               Service:
               - lambda.amazonaws.com
-              - edgelambda.amazonaws.com
+#              - edgelambda.amazonaws.com
             Action:
             - sts:AssumeRole
         Path: "/"
-#        Policies:
-#        - PolicyName: logs
-#          PolicyDocument:
-#            Version: '2012-10-17'
-#            Statement:
-#            - Effect: Allow
-#              Action:
-#              - logs:*
-#              Resource: arn:aws:logs:*:*:*
-#        - PolicyName: stepfn
-#          PolicyDocument:
-#            Version: '2012-10-17'
-#            Statement:
-#            - Effect: Allow
-#              Action:
-#              - "states:StartExecution"
-#              Resource:
-#                - 'Fn::Join':
-#                    - ''
-#                    -
-#                      - "arn:aws:states:"
-#                      - Ref: "AWS::Region"
-#                      - ":"
-#                      - Ref: "AWS::AccountId"
-#                      - ":stateMachine:sfnsubprocess-"
-#                      - ${self:service}
-#                      - "-"
-#                      - ${self:provider.stage}
-#        - PolicyName: s3
-#          PolicyDocument:
-#            Version: '2012-10-17'
-#            Statement:
-#            - Effect: Allow
-#              Action:
-#              - s3:PutObject
-#              - s3:GetObject
-#              Resource:
-#                - 'Fn::Join':
-#                  - '/'
-#                  -
-#                    - Fn::GetAtt: [ ProcessInputBucket, Arn ]
-#                    - '*'
+
     logsPolicy:
       Type: AWS::IAM::ManagedPolicy
       Properties:
@@ -251,6 +210,10 @@ resources:
             Resource: arn:aws:logs:*:*:*
         Roles:
         - Ref: stepRole
+        - Ref: minimalStepRole
+        - Ref: processStartRole
+        - Ref: processDataRole
+        - Ref: processStateRole
         
     stepfnPolicy:
       Type: AWS::IAM::ManagedPolicy
@@ -276,7 +239,7 @@ resources:
         Roles:
         - Ref: stepRole
 
-    s3Policy:
+    s3ReadWritePolicy:
       Type: AWS::IAM::ManagedPolicy
       Properties:
         PolicyDocument:
@@ -310,15 +273,6 @@ resources:
             Action:
             - sts:AssumeRole
         Path: "/"
-        Policies:
-        - PolicyName: logs
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-            - Effect: Allow
-              Action:
-              - logs:*
-              Resource: arn:aws:logs:*:*:*
                   
     stateMachineRole:
       Type: AWS::IAM::Role
@@ -339,21 +293,25 @@ resources:
                       - '.amazonaws.com'
               Action: "sts:AssumeRole"
         Path: "/"
-        Policies:
-          - PolicyName: StatesExecutionPolicy
-            PolicyDocument:
-              Version: '2012-10-17'
-              Statement:
-                - Effect: Allow
-                  Action:
-                    - "lambda:InvokeFunction"
-                  Resource:
-                    - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-stepA"
-                    - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-stepB"
-                    - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-stepC"
-                    - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-stepD"
-                    - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-stepE"
-                    - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-stepF"
+
+    stateMachinePolicy:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - "lambda:InvokeFunction"
+              Resource:
+                - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-stepA"
+                - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-stepB"
+                - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-stepC"
+                - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-stepD"
+                - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-stepE"
+                - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-stepF"
+        Roles:
+        - Ref: stateMachineRole
 
     subprocStateMachineRole:
       Type: AWS::IAM::Role
@@ -374,18 +332,22 @@ resources:
                       - '.amazonaws.com'
               Action: "sts:AssumeRole"
         Path: "/"
-        Policies:
-          - PolicyName: StatesExecutionPolicy
-            PolicyDocument:
-              Version: '2012-10-17'
-              Statement:
-                - Effect: Allow
-                  Action:
-                    - "lambda:InvokeFunction"
-                  Resource:
-                    - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-downstreamA"
-                    - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-downstreamB"
-                    - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-downstreamC"
+
+    subprocStateMachinePolicy:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Action:
+                - "lambda:InvokeFunction"
+              Resource:
+                - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-downstreamA"
+                - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-downstreamB"
+                - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-downstreamC"
+        Roles:
+        - Ref: subprocStateMachineRole
 
 
     processStartRole:
@@ -400,52 +362,54 @@ resources:
             Principal:
               Service:
               - lambda.amazonaws.com
-              - edgelambda.amazonaws.com
+#              - edgelambda.amazonaws.com
             Action:
             - sts:AssumeRole
         Path: "/"
-        Policies:
-        - PolicyName: logs
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-            - Effect: Allow
-              Action:
-              - logs:*
-              Resource: arn:aws:logs:*:*:*
-        - PolicyName: stepsfns
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-            - Effect: Allow
-              Action:
-              - "states:StartExecution"
-              Resource:
-                - 'Fn::Join':
-                    - ''
-                    -
-                      - "arn:aws:states:"
-                      - Ref: "AWS::Region"
-                      - ":"
-                      - Ref: "AWS::AccountId"
-                      - ":stateMachine:sfn-"
-                      - ${self:service}
-                      - '-'
-                      - ${self:provider.stage}
-        - PolicyName: s3
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-            - Effect: Allow
-              Action:
-              - s3:PutObject
-              Resource:
-                - 'Fn::Join':
-                  - '/'
-                  -
-                    - Fn::GetAtt: [ ProcessInputBucket, Arn ]
-                    - '*'
 
+
+    startStateMachinePolicy:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - "states:StartExecution"
+            Resource:
+              - 'Fn::Join':
+                  - ''
+                  -
+                    - "arn:aws:states:"
+                    - Ref: "AWS::Region"
+                    - ":"
+                    - Ref: "AWS::AccountId"
+                    - ":stateMachine:sfn-"
+                    - ${self:service}
+                    - '-'
+                    - ${self:provider.stage}
+        Roles:
+        - Ref: processStartRole
+
+    writeBucketPolicy:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:PutObject
+            Resource:
+              - 'Fn::Join':
+                - '/'
+                -
+                  - Fn::GetAtt: [ ProcessInputBucket, Arn ]
+                  - '*'
+        Roles:
+        - Ref: processStartRole
+  
     processDataRole:
       Type: AWS::IAM::Role
       Properties:
@@ -461,28 +425,47 @@ resources:
             Action:
             - sts:AssumeRole
         Path: "/"
-        Policies:
-        - PolicyName: logs
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-            - Effect: Allow
-              Action:
-              - logs:*
-              Resource: arn:aws:logs:*:*:*
-        - PolicyName: s3
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-            - Effect: Allow
-              Action:
-              - s3:GetObject
-              Resource:
-                - 'Fn::Join':
-                  - '/'
-                  -
-                    - Fn::GetAtt: [ ProcessInputBucket, Arn ]
-                    - '*'
+#        Policies:
+#        - PolicyName: logs
+#          PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#            - Effect: Allow
+#              Action:
+#              - logs:*
+#              Resource: arn:aws:logs:*:*:*
+#        - PolicyName: s3
+#          PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#            - Effect: Allow
+#              Action:
+#              - s3:GetObject
+#              Resource:
+#                - 'Fn::Join':
+#                  - '/'
+#                  -
+#                    - Fn::GetAtt: [ ProcessInputBucket, Arn ]
+#
+#                    - '*'
+ 
+    readBucketPolicy:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - s3:GetObject
+            Resource:
+              - 'Fn::Join':
+                - '/'
+                -
+                  - Fn::GetAtt: [ ProcessInputBucket, Arn ]
+                  - '*'
+        Roles:
+        - Ref: processDataRole
 
     processStateRole:
       Type: AWS::IAM::Role
@@ -496,39 +479,68 @@ resources:
             Principal:
               Service:
               - lambda.amazonaws.com
-              - edgelambda.amazonaws.com
+#              - edgelambda.amazonaws.com
             Action:
             - sts:AssumeRole
         Path: "/"
-        Policies:
-        - PolicyName: logs
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-            - Effect: Allow
-              Action:
-              - logs:*
-              Resource: arn:aws:logs:*:*:*
-        - PolicyName: stepsfns
-          PolicyDocument:
-            Version: '2012-10-17'
-            Statement:
-            - Effect: Allow
-              Action:
-              - "states:DescribeExecution"
-              Resource:
-                - 'Fn::Join':
-                    - ''
-                    -
-                      - "arn:aws:states:"
-                      - Ref: "AWS::Region"
-                      - ":"
-                      - Ref: "AWS::AccountId"
-                      - ":execution:sfn-"
-                      - ${self:service}
-                      - '-'
-                      - ${self:provider.stage}
-                      - ':*'
+#        Policies:
+#        - PolicyName: logs
+#          PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#            - Effect: Allow
+#              Action:
+#              - logs:*
+#
+
+    sfnGetStatePolicy:
+      Type: AWS::IAM::ManagedPolicy
+      Properties:
+        PolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+          - Effect: Allow
+            Action:
+            - "states:DescribeExecution"
+            Resource:
+              - 'Fn::Join':
+                  - ''
+                  -
+                    - "arn:aws:states:"
+                    - Ref: "AWS::Region"
+                    - ":"
+                    - Ref: "AWS::AccountId"
+                    - ":execution:sfn-"
+                    - ${self:service}
+                    - '-'
+                    - ${self:provider.stage}
+                    - ':*'
+
+        Roles:
+        - Ref: processStateRole
+
+#Resource: arn:aws:logs:*:*:*
+#        - PolicyName: stepsfns
+#          PolicyDocument:
+#            Version: '2012-10-17'
+#            Statement:
+#            - Effect: Allow
+#              Action:
+#              - "states:DescribeExecution"
+#              Resource:
+#                - 'Fn::Join':
+#                    - ''
+#                    -
+#                      - "arn:aws:states:"
+#                      - Ref: "AWS::Region"
+#                      - ":"
+#                      - Ref: "AWS::AccountId"
+#                      - ":execution:sfn-"
+#                      - ${self:service}
+#                      - '-'
+#                      - ${self:provider.stage}
+#
+#                      - ':*'
 plugins:
   - serverless-step-functions
   - serverless-pseudo-parameters
