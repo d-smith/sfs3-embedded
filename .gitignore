@@ -1,3 +1,5 @@
 node_modules/
 .serverless/
 package/
+app.zip
+deployspec.yml

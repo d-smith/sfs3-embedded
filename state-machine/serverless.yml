@@ -150,6 +150,7 @@ stepFunctions:
 
     DownstreamProcess:
       name: sfnsubprocess-${self:service}-${opt:stage}
+      role: "arn:aws:iam::#{AWS::AccountId}:role/subprocSMRole-${self:service}-${opt:stage}"
       definition:
         Comment: 'downstream process invoked from hellostepfunc1'
         StartAt:
@@ -291,6 +292,40 @@ resources:
                     - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-stepD"
                     - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-stepE"
                     - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${self:provider.stage}-stepF"
+
+    subprocStateMachineRole:
+      Type: AWS::IAM::Role
+      Properties:
+        RoleName:
+          Fn::Join: [ '-', ['subProcSMRole', '${self:service}',  '${self:provider.stage}' ]]
+        AssumeRolePolicyDocument:
+          Version: '2012-10-17'
+          Statement:
+            - Effect: Allow
+              Principal:
+                Service:
+                  - 'Fn::Join':
+                    - ''
+                    -
+                      - 'states.'
+                      - Ref: 'AWS::Region'
+                      - '.amazonaws.com'
+              Action: "sts:AssumeRole"
+        Path: "/"
+        Policies:
+          - PolicyName: StatesExecutionPolicy
+            PolicyDocument:
+              Version: '2012-10-17'
+              Statement:
+                - Effect: Allow
+                  Action:
+                    - "lambda:InvokeFunction"
+                  Resource:
+                    - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-downstreamA"
+                    - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-downstreamB"
+                    - "arn:aws:lambda:#{AWS::Region}:#{AWS::AccountId}:function:${self:service}-${opt:stage}-downstreamC"
+
+
     processStartRole:
       Type: AWS::IAM::Role
       Properties:
