@@ -38,7 +38,7 @@ Note when using s3 to hold process state data, steps that read and write process
 consistency model](https://docs.aws.amazon.com/AmazonS3/latest/dev/Introduction.html#ConsistencyModel). In the sample code we include a read-predicate for each step to ensure the previous step's data has been read prior to proceeding. If the read predicate is not satisfied, a specific error is thrown indicating the failure, and step function error handling and retry specification is used to attempt the step again.
 
 
-## Step Function and API Facade Deployment
+## Step Function and API Facade Deployment - Non VPC
 
 To install the step function, from the `state-machine` directory:
 
@@ -48,6 +48,34 @@ sls deploy --stage <stage name> --aws-profile <profile name>
 ````
 
 The deployment will return the endpoints and API key needed to run the sample service.
+
+## Deployment in a VPC
+
+If desired, you can [deploy the Lambdas in a VPC you own](https://docs.aws.amazon.com/lambda/latest/dg/vpc.html). To do this, you need to know the subnets you want to place the Lambdas in, and the security groups that define their network access.
+
+For this sample, you can install a VPC using vpc.yml.
+
+```console
+aws cloudformation create-stack --stack-name my-vpc --template-body file://vpc.yml
+```
+
+Once the VPC is installed, you will need the private subnets in the VPC, and the default security group.
+
+To get the private subnets, look at the stack outputs via
+
+```console
+aws cloudformation describe-stacks --stack-name my-vpc
+```
+
+You can get the default security group for the vpc (using your vpc id) like this:
+
+```console
+aws ec2 describe-security-groups --filters Name=vpc-id,Values=vpc-7062b70a Name=group-name,Values=default
+```
+
+With the VPC in place and with the subnets and security group id known, edit `serverless.yml`. Uncomment the VPC section under functions stepA - stepF. You must also uncomment the eniPolicy as Lambda must have the ability to create, describe, and delete Elastic Network Interfaces to enable networking in the VPC.
+
+Note that the Lambda placement will require access to the s3 endpoint in the region they are running in.
 
 ### Monitoring Dashboard
 
