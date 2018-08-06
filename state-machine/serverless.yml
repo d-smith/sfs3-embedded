@@ -1,3 +1,13 @@
+#
+# VPC Notes
+#
+# To use this sample with a VPC, you need the security groups and private
+# subnets for your VPC content. Uncomment the VPC sections under 
+# stepA - stepF function definitions, and uncomment the eniPolicy section 
+# under resources, being sure to provide the appropriate IDs associated with 
+# your deployment environment.
+
+
 service: sfs3embedded
 
 provider:
@@ -38,31 +48,73 @@ functions:
     timeout: 10
     role:
       stepRole
+#    vpc:
+#      securityGroupIds:
+#        - sg-b05da5fd
+#      subnetIds:
+#        - subnet-c4239ba3
+#        - subnet-7cd91642
+
   stepB:
     handler: aprocess.stepB
     timeout: 10
     role:
       stepRole
+#    vpc:
+#      securityGroupIds:
+#        - sg-b05da5fd
+#      subnetIds:
+#        - subnet-c4239ba3
+#        - subnet-7cd91642
+
   stepC:
     handler: aprocess.stepC
     timeout: 10
     role:
       stepRole
+#    vpc:
+#      securityGroupIds:
+#        - sg-b05da5fd
+#      subnetIds:
+#        - subnet-c4239ba3
+#        - subnet-7cd91642
+
   stepD:
     handler: aprocess.stepD
     timeout: 10
     role:
       stepRole
+#    vpc:
+#      securityGroupIds:
+#        - sg-b05da5fd
+#      subnetIds:
+#        - subnet-c4239ba3
+#        - subnet-7cd91642
+
   stepE:
     handler: aprocess.stepE
     timeout: 10
     role:
       stepRole
+#    vpc:
+#      securityGroupIds:
+#        - sg-b05da5fd
+#      subnetIds:
+#        - subnet-c4239ba3
+#        - subnet-7cd91642
+
   stepF:
     handler: aprocess.stepF
     timeout: 10
     role:
       stepRole
+ #   vpc:
+ #     securityGroupIds:
+ #       - sg-b05da5fd
+ #     subnetIds:
+ #       - subnet-c4239ba3
+ #       - subnet-7cd91642
+
   downstreamA:
     handler: downstream.A
     role:
@@ -195,6 +247,22 @@ resources:
             Action:
             - sts:AssumeRole
         Path: "/"
+
+#    eniPolicy:
+#      Type: AWS::IAM::ManagedPolicy
+#      Properties:
+#        PolicyDocument:
+#          Version: '2012-10-17'
+#          Statement:
+#          - Effect: Allow
+#            Action:
+#            - ec2:CreateNetworkInterface
+#            - ec2:DescribeNetworkInterfaces
+#            - ec2:DeleteNetworkInterface
+#            Resource: '*'
+#        Roles:
+#        - Ref: stepRole
+
 
     logsPolicy:
       Type: AWS::IAM::ManagedPolicy
